@@ -1,3 +1,4 @@
+#include <vector>
 
 using namespace std;
 
@@ -35,4 +36,21 @@ class PCounter{
             
 };
 
+class predictor{
+    private:
+        int index;
+        int ghr_size;
+        vector<PCounter> counters;
+
+    public:
+        predictor(int in_size, int in_ghr)
+        {
+            index = in_size;
+            ghr_size = in_ghr;
+
+            counters.resize(2^index);
+        }
+            
+
+};
 
