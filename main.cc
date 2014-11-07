@@ -47,7 +47,7 @@ int main(int argc, char *argv[])
     {   
         if (argc != 9)
         {
-            cout << "Not enough arguments, ./sim gshare <K> <M1> <N> <M2> <BTB size>\
+            cout << "Not enough arguments, ./sim hybrid <K> <M1> <N> <M2> <BTB size>\
 <BTB assoc> <tracefile>" << endl;
             exit(EXIT_FAILURE);
         }
@@ -59,6 +59,7 @@ int main(int argc, char *argv[])
 
     } 
 
+    if (Debug) cout << p_gs->gbhr_s() << endl; 
     if (!trace)
     {
         cerr << "File not found, please check" << endl;
@@ -70,13 +71,14 @@ int main(int argc, char *argv[])
     while(trace)
     {
         tran_cnt++;
-        if (Debug) cout << dec<<  tran_cnt << ". PC: ";
         //taking input
         string strIn;
         //getting the line
         getline(trace, strIn);
         //breaking from the while loop if this is the last line of the file.
         if (trace.eof()) break;
+
+        if (Debug) cout << dec<<  tran_cnt << ". PC: ";
 
         InTran.setAddr(strIn);
         //Setting the type of transaction
@@ -94,7 +96,13 @@ int main(int argc, char *argv[])
         if (type == 1) 
         {
             if (Debug) cout << "BIMODAL index: ";
-            p_bm->predict(InTran.retAddr());
+            p_bm->predict(InTran.retAddr(), InTran.tranType());
+            if (Debug) cout << endl;
+        }
+        else if (type == 2) 
+        {
+            if (Debug) cout << "GSHARE index: ";
+            p_gs->predict(InTran.retAddr(), InTran.tranType());
             if (Debug) cout << endl;
         }
     }
