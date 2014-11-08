@@ -1,8 +1,9 @@
 #include <vector>
 #include <cmath>
+#include <iomanip>
 
 using namespace std;
-int Debug = 1;
+int Debug = 0;
 
 class PCounter{
     public:
@@ -44,8 +45,10 @@ class predictor{
         int gbhr_size;
         int gbhr_offset;
         int gbhr;
+        int num_counters;
         vector<PCounter> counters;
-        int mispredict;
+        int predicts,mispredicts;
+        float mispred_rate;
 
     public:
         predictor(int in_size, int in_ghr)
@@ -53,14 +56,22 @@ class predictor{
             index_size = in_size;
             index_offset = pow(2,index_size) - 1;
             gbhr_size = in_ghr;
-            gbhr_offset = (pow(2,gbhr_size) - 1); //*pow(2,(index_size - gbhr_size));  
-
-            counters.resize(pow(2,index_size));
+            gbhr_offset = (pow(2,gbhr_size) - 1); 
+            num_counters = pow(2,index_size);
+            counters.resize(num_counters);
+            predicts = 0;
+            mispredicts = 0;
         }
 
-        int num_counters()
-        {   return counters.size();}
+        int num_cntrs()
+        {   return num_counters;}
        
+        int num_preds()
+        {   return predicts; }
+        
+        int num_mis()
+        {   return mispredicts; }
+
         int gbhr_off()
         {   return gbhr_offset; }
 
@@ -69,28 +80,75 @@ class predictor{
 
         void predict(int addr, bool taken)
         {
+            //Updating number of predictions
+            predicts += 1;
+            if (Debug) cout << "predicts: " << predicts << endl; 
             addr = addr / 4; //Removing the last 2 bits
             int index = addr & index_offset;
             if (gbhr_size!=0)
             {
                 int tmp =  (int)pow(2,(index_size - gbhr_size));    
-                int index = ((gbhr ^ (index/tmp))* tmp) + (index & (tmp - 1));            
+                index = ((gbhr ^ (index/tmp))* tmp) + (index & (tmp - 1));            
             }
-            //Need to add misprediction counter
-            //need to add update of prediction counters
-            //Update of GBHR
-            //
-            if (Debug) cout << hex << index;
+            if (Debug) 
+            {
+                cout << dec << index;
+                cout << " old value: " << counters.at(index).present_state();
+                cout << " new value ";
+            }
+
+            //Update number of mispredicts
+            if ((counters.at(index).prediction()) != taken)
+            {   
+                mispredicts += 1;
+            }
+
+            //Update the prediction counter based on if the branch was taken.
+            counters.at(index).update_state(taken);
+            
+            //Update the value of the gbhr
+            gbhr = (gbhr/2) | (int)taken * (int)pow(2,gbhr_size-1);
+
+            if (Debug)
+            {
+                cout << counters.at(index).present_state() << endl; 
+                if (gbhr_size)
+                    cout << "BHR UPDATED: " << gbhr << endl;
+            }
         }
 
+        void print_op()
+        {
+            cout << endl << "OUTPUT" << endl;
+            cout << "number of predictions:  " << predicts << endl;
+            cout << "number of mispredictions:  "<< mispredicts << endl;
+            mispred_rate = ((float)mispredicts/predicts)*100;
+            cout << "misprediction rate: " << setprecision(4) << mispred_rate << "%" << endl;
+            cout << "FINAL ";
+            
+            if(!gbhr_size)
+                cout << "BIMODAL";
+            else
+                cout << "GSHARE";
+            cout << "  CONTENTS" << endl;
+
+            for (int i = 0;i<num_counters;i++)
+            {
+                cout << dec << i;
+                cout << setw(7) << counters.at(i).present_state() << endl;
+            }
+        }
 };
 
 class Transaction{
     private:
-        int type,addr;
+        int addr;
+        bool type;
         
     public:
-        void setType(int x) { type = x;}
+        void setType(bool x) { type = x;}
+        //type is true if branch is actually taken
+        //type is false if branch is actually not taken
         int tranType() { return type;}
 
         void setAddr(const string &x) 

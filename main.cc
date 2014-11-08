@@ -66,30 +66,26 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
-    int tran_cnt = 0;
+    int tran_cnt = 1;
     Transaction InTran;
-    while(trace)
+    string strIn;
+    
+    //getting the first line
+    getline(trace, strIn);
+    while(!trace.eof())
     {
-        tran_cnt++;
-        //taking input
-        string strIn;
-        //getting the line
-        getline(trace, strIn);
-        //breaking from the while loop if this is the last line of the file.
-        if (trace.eof()) break;
-
         if (Debug) cout << dec<<  tran_cnt << ". PC: ";
 
         InTran.setAddr(strIn);
         //Setting the type of transaction
         if (strIn[7] == 't')
         {
-            InTran.setType(1);
+            InTran.setType(true);
             if (Debug) cout << hex << InTran.retAddr() << " t" << endl;
         }
         else if (strIn[7] == 'n')
         {
-            InTran.setType(0);
+            InTran.setType(false);
             if (Debug) cout << hex << InTran.retAddr() << " n"  << endl;
         }
 
@@ -105,6 +101,34 @@ int main(int argc, char *argv[])
             p_gs->predict(InTran.retAddr(), InTran.tranType());
             if (Debug) cout << endl;
         }
+        tran_cnt++;
+
+        //getting data from next line
+        getline(trace, strIn);
+        
+        //breaking from the while loop if this is the last line of the file.
+        //Because the eof state may not get set until after a read is attempted 
+        //past the end of file. In our case we are reading line i+1 in iteration i. 
+        //Thus when we reach the last line, the next line is read and the eofbit is set
+        //before attempting the while loop condition.
+    }
+
+    //Printing outputs
+    cout << "COMMAND" << endl;
+    for (int i = 0; i<argc; i++)
+    {
+        cout << argv[i] << " ";
+    }
+    float tmp;
+    switch (type)
+    {
+        case 1:
+            p_bm->print_op();
+            break;
+
+        case 2:
+            p_gs->print_op();
+            break;
     }
 
     return 0;
