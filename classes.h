@@ -8,9 +8,9 @@ int Debug = 0;
 class PCounter{
     public:
 
-        PCounter()
+        void init_state(int init)
         {
-            state = 2;
+           state = init;
         }
         
         int present_state()
@@ -53,7 +53,6 @@ class predictor{
         int num_counters;
         vector<PCounter> counters;
         int predicts,mispredicts;
-        float mispred_rate;
 
     public:
         predictor(int in_size, int in_ghr)
@@ -63,9 +62,13 @@ class predictor{
             gbhr_size = in_ghr;
             gbhr_offset = (pow(2,gbhr_size) - 1); 
             num_counters = pow(2,index_size);
-            counters.resize(num_counters);
             predicts = 0;
             mispredicts = 0;
+            counters.resize(num_counters);
+            for (int i=0;i<num_counters;i++)
+            {
+                counters.at(i).init_state(2);
+            }
         }
 
         int num_cntrs()
@@ -135,19 +138,6 @@ class predictor{
 
         void print_op()
         {
-            cout << endl << "OUTPUT" << endl;
-            cout << "number of predictions:  " << predicts << endl;
-            cout << "number of mispredictions:  "<< mispredicts << endl;
-            mispred_rate = ((float)mispredicts/predicts)*100;
-            cout << "misprediction rate: " << setprecision(4) << mispred_rate << "%" << endl;
-            cout << "FINAL ";
-            
-            if(!gbhr_size)
-                cout << "BIMODAL";
-            else
-                cout << "GSHARE";
-            cout << "  CONTENTS" << endl;
-
             for (int i = 0;i<num_counters;i++)
             {
                 cout << dec << i;
@@ -156,6 +146,48 @@ class predictor{
         }
 };
 
+class chooser{
+    private:
+        int size, offset, num_counters;
+        vector<PCounter> chooser_cntrs;
+
+    public:
+        chooser(int k)
+        {
+            size = k;
+            num_counters = pow(2,size);
+            chooser_cntrs.resize(num_counters);
+            offset = num_counters - 1;
+            for (int i=0;i<num_counters;i++)
+            {
+                chooser_cntrs.at(i).init_state(1);
+            }
+        }
+
+        int get_choice(int addr)
+        {
+            addr = addr/4;
+            int index = addr & offset;
+            return chooser_cntrs.at(index).present_state();
+        }
+
+        void update_cntr(int addr, bool inp)
+        {
+            addr = addr/4;
+            int index = addr&offset;
+            chooser_cntrs.at(index).update_state(inp);
+        }
+
+        int print_op()
+        {
+            cout << "FINAL CHOOSER CONTENTS" << endl;
+            for (int i = 0;i<num_counters;i++)
+            {
+                cout << dec << i;
+                cout << setw(7) << chooser_cntrs.at(i).present_state() << endl;
+            }
+        }
+};
 class Transaction{
     private:
         int addr;

@@ -15,6 +15,7 @@ int main(int argc, char *argv[])
     std::string input (argv[1]), bimodal("bimodal"), gshare("gshare"), hybrid("hybrid");
     
     predictor *p_bm, *p_gs ;
+    chooser *c_hy;
 
     if (!input.compare(bimodal))
     {
@@ -52,12 +53,11 @@ int main(int argc, char *argv[])
             exit(EXIT_FAILURE);
         }
 
-        //Another class for hybrid?
+        c_hy = new chooser(atoi(argv[2]));
         p_bm = new predictor(atoi(argv[5]),0);
         p_gs = new predictor(atoi(argv[3]),atoi(argv[4]));
         type = 3;
         trace.open(argv[8]); 
-
     } 
 
     if (Debug) cout << p_gs->gbhr_s() << endl; 
@@ -67,13 +67,13 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
-    int tran_cnt = 1;
+    int tran_cnt = 0;
     Transaction InTran;
     string strIn;
     
     //getting the first line
     getline(trace, strIn);
-    predictor_op p;
+    predictor_op p1, p2;
     while(!trace.eof())
     {
         if (Debug) cout << dec<<  tran_cnt << ". PC: ";
@@ -94,19 +94,56 @@ int main(int argc, char *argv[])
         if (type == 1) 
         {
             if (Debug) cout << "BIMODAL index: ";
-            p = p_bm->predict(InTran.retAddr());
-            p_bm->update_tot_cnts(InTran.tranType(), p);
-            p_bm->update_gbhr(InTran.tranType());
+            p1 = p_bm->predict(InTran.retAddr());
+            p_bm->update_tot_cnts(InTran.tranType(), p1);
             if (Debug) cout << endl;
         }
         else if (type == 2) 
         {
             if (Debug) cout << "GSHARE index: ";
-            p = p_gs->predict(InTran.retAddr());
-            p_gs->update_tot_cnts(InTran.tranType(), p);
+            p1 = p_gs->predict(InTran.retAddr());
+            p_gs->update_tot_cnts(InTran.tranType(), p1);
             p_gs->update_gbhr(InTran.tranType());
             if (Debug) cout << endl;
         }
+        else if (type == 3)
+        {
+            //Making predictions
+            p1 = p_bm->predict(InTran.retAddr());
+            p2 = p_gs->predict(InTran.retAddr());
+            
+            //Getting choice from chooser
+            int choice = c_hy->get_choice(InTran.retAddr());
+            
+            //Picking prediction based on chooser
+            if (choice<2)
+            {
+                //Choose BIMODAL, and update mispredict based on that
+                p_bm->update_tot_cnts(InTran.tranType(), p1);
+            }
+            else
+            {
+                p_gs->update_tot_cnts(InTran.tranType(), p2);
+            }
+            
+            p_gs->update_gbhr(InTran.tranType());
+
+            //Updating Chooser counter
+            //BIMODAL correct and GSHARE incorrect
+            if (p1.prediction == InTran.tranType() &&
+                    p2.prediction != InTran.tranType())
+            {
+                c_hy->update_cntr(InTran.retAddr(),false);
+            }
+            //BIMODAL incorrect and GSHARE correct
+            else if (p1.prediction != InTran.tranType() &&
+                    p2.prediction == InTran.tranType())
+            {
+                c_hy->update_cntr(InTran.retAddr(),true);
+            }
+        }
+
+        //Updating number of completed transactions
         tran_cnt++;
 
         //getting data from next line
@@ -119,23 +156,50 @@ int main(int argc, char *argv[])
         //before attempting the while loop condition.
     }
 
+    float mispred_rate;
     //Printing outputs
     cout << "COMMAND" << endl;
     for (int i = 0; i<argc; i++)
     {
         cout << argv[i] << " ";
     }
-    float tmp;
     switch (type)
     {
         case 1:
+            cout << endl << "OUTPUT" << endl;
+            cout << "number of predictions:  " << p_bm->num_preds() << endl;
+            cout << "number of mispredictions:  "<< p_bm->num_mis() << endl;
+            mispred_rate = ((float)p_bm->num_mis()/p_bm->num_preds())*100;
+            cout << "misprediction rate: " << setprecision(2) << fixed 
+                << mispred_rate << "%" << endl;
+            cout << "FINAL BIMODAL CONTENTS" << endl;
             p_bm->print_op();
             break;
 
         case 2:
+            cout << endl << "OUTPUT" << endl;
+            cout << "number of predictions:  " << p_gs->num_preds() << endl;
+            cout << "number of mispredictions:  "<< p_gs->num_mis() << endl;
+            mispred_rate = ((float)p_gs->num_mis()/p_gs->num_preds())*100;
+            cout << "misprediction rate: " << setprecision(2) << fixed 
+                << mispred_rate << "%" << endl;
+            cout << "FINAL GSHARE CONTENTS" << endl;
             p_gs->print_op();
             break;
 
+        case 3:
+            cout << endl << "OUTPUT" << endl;
+            cout << "number of predictions:  " << tran_cnt << endl;
+            cout << "number of mispredictions:  "<< p_bm->num_mis() + p_gs->num_mis() << endl;
+            mispred_rate = ((float)(p_bm->num_mis() + p_gs->num_mis())
+                    /tran_cnt)*100;
+            cout << "misprediction rate: " << setprecision(2) << fixed 
+                << mispred_rate << "%" << endl;
+            c_hy->print_op();
+            cout << "FINAL GSHARE CONTENTS" << endl;
+            p_gs->print_op();
+            cout << "FINAL BIMODAL CONTENTS" << endl;
+            p_bm->print_op();
 
     }
 
