@@ -53,7 +53,8 @@ int main(int argc, char *argv[])
         }
 
         //Another class for hybrid?
-        p_bm = new predictor(atoi(argv[2]),atoi(argv[3]));
+        p_bm = new predictor(atoi(argv[5]),0);
+        p_gs = new predictor(atoi(argv[3]),atoi(argv[4]));
         type = 3;
         trace.open(argv[8]); 
 
@@ -72,6 +73,7 @@ int main(int argc, char *argv[])
     
     //getting the first line
     getline(trace, strIn);
+    predictor_op p;
     while(!trace.eof())
     {
         if (Debug) cout << dec<<  tran_cnt << ". PC: ";
@@ -92,13 +94,17 @@ int main(int argc, char *argv[])
         if (type == 1) 
         {
             if (Debug) cout << "BIMODAL index: ";
-            p_bm->predict(InTran.retAddr(), InTran.tranType());
+            p = p_bm->predict(InTran.retAddr());
+            p_bm->update_tot_cnts(InTran.tranType(), p);
+            p_bm->update_gbhr(InTran.tranType());
             if (Debug) cout << endl;
         }
         else if (type == 2) 
         {
             if (Debug) cout << "GSHARE index: ";
-            p_gs->predict(InTran.retAddr(), InTran.tranType());
+            p = p_gs->predict(InTran.retAddr());
+            p_gs->update_tot_cnts(InTran.tranType(), p);
+            p_gs->update_gbhr(InTran.tranType());
             if (Debug) cout << endl;
         }
         tran_cnt++;
@@ -129,6 +135,8 @@ int main(int argc, char *argv[])
         case 2:
             p_gs->print_op();
             break;
+
+
     }
 
     return 0;

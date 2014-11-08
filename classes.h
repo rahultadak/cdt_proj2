@@ -39,6 +39,11 @@ class PCounter{
             
 };
 
+struct predictor_op{
+    int index;
+    bool prediction;
+};
+
 class predictor{
     private:
         int index_size, index_offset;
@@ -78,7 +83,7 @@ class predictor{
         int gbhr_s()
         {   return gbhr_size; }
 
-        void predict(int addr, bool taken)
+        predictor_op predict(int addr)
         {
             //Updating number of predictions
             predicts += 1;
@@ -96,24 +101,35 @@ class predictor{
                 cout << " old value: " << counters.at(index).present_state();
                 cout << " new value ";
             }
+            
+            predictor_op op;
+            op.index = index;
+            op.prediction = counters.at(index).prediction();
+            return op;
+        }
 
+        void update_tot_cnts(bool taken, predictor_op p)
+        {
             //Update number of mispredicts
-            if ((counters.at(index).prediction()) != taken)
+            if (p.prediction != taken)
             {   
                 mispredicts += 1;
             }
 
             //Update the prediction counter based on if the branch was taken.
-            counters.at(index).update_state(taken);
-            
+            counters.at(p.index).update_state(taken);
+            if (Debug) 
+                cout << counters.at(p.index).present_state() << endl; 
+        }
+
+        void update_gbhr(bool taken)
+        {
             //Update the value of the gbhr
             gbhr = (gbhr/2) | (int)taken * (int)pow(2,gbhr_size-1);
 
-            if (Debug)
+            if (Debug && gbhr_size != 0)
             {
-                cout << counters.at(index).present_state() << endl; 
-                if (gbhr_size)
-                    cout << "BHR UPDATED: " << gbhr << endl;
+                cout << "BHR UPDATED: " << gbhr << endl;
             }
         }
 
