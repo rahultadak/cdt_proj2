@@ -10,7 +10,7 @@ using namespace std;
 
 int main(int argc, char *argv[])
 {
-    int type;
+    int type = 0;
     ifstream trace;
     std::string input (argv[1]), bimodal("bimodal"), gshare("gshare"), hybrid("hybrid");
     
