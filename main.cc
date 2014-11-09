@@ -5,6 +5,7 @@
 #include <cstdlib>
 
 #include "classes.h"
+#include "cache_classes.h"
 
 using namespace std;
 
@@ -12,8 +13,12 @@ int main(int argc, char *argv[])
 {
     int type = 0;
     ifstream trace;
-    std::string input (argv[1]), bimodal("bimodal"), gshare("gshare"), hybrid("hybrid");
-    
+    std::string input(argv[1]), bimodal("bimodal"), gshare("gshare"), hybrid("hybrid");
+   
+    //Instantiating cache object
+    Cache *btb;
+
+    //Instantiating the predictor and chooser classed as required
     predictor *p_bm, *p_gs ;
     chooser *c_hy;
 
@@ -27,6 +32,13 @@ int main(int argc, char *argv[])
         }
 
         p_bm = new predictor(atoi(argv[2]),0);
+        if (atoi(argv[3]))
+        {
+            btb = new Cache(4,atoi(argv[3]),atoi(argv[4]),0,0,NULL);
+        }
+        else
+            btb = NULL;
+
         type = 1;
         trace.open(argv[5]); 
     }
@@ -40,6 +52,12 @@ int main(int argc, char *argv[])
         }
 
         p_gs = new predictor(atoi(argv[2]),atoi(argv[3]));
+        if (atoi(argv[4]))
+        {
+            btb = new Cache(4,atoi(argv[4]),atoi(argv[5]),0,0,NULL);
+        }
+        else
+            btb = NULL;
         type = 2;
         trace.open(argv[6]); 
 
@@ -56,6 +74,12 @@ int main(int argc, char *argv[])
         c_hy = new chooser(atoi(argv[2]));
         p_bm = new predictor(atoi(argv[5]),0);
         p_gs = new predictor(atoi(argv[3]),atoi(argv[4]));
+        if (atoi(argv[6]))
+        {
+            btb = new Cache(4,atoi(argv[6]),atoi(argv[7]),0,0,NULL);
+        }
+        else 
+            btb = NULL;
         type = 3;
         trace.open(argv[8]); 
     } 
@@ -70,6 +94,8 @@ int main(int argc, char *argv[])
     int tran_cnt = 0;
     Transaction InTran;
     string strIn;
+    bool btb_hit;
+    int btb_mispreds = 0;
     
     //getting the first line
     getline(trace, strIn);
@@ -89,6 +115,18 @@ int main(int argc, char *argv[])
         {
             InTran.setType(false);
             if (Debug) cout << hex << InTran.retAddr() << " n"  << endl;
+        }
+
+        //BTB lookup
+        if (btb!=NULL)
+        {
+            btb_hit = btb->request(InTran.retAddr(),0);
+            if (!btb_hit)
+            {
+                if (InTran.tranType())
+                    btb_mispreds += 1;
+                goto contin;
+            }
         }
 
         if (type == 1) 
@@ -143,6 +181,7 @@ int main(int argc, char *argv[])
             }
         }
 
+contin:
         //Updating number of completed transactions
         tran_cnt++;
 
@@ -163,45 +202,94 @@ int main(int argc, char *argv[])
     {
         cout << argv[i] << " ";
     }
-    switch (type)
+
+    if (btb == NULL)
     {
-        case 1:
-            cout << endl << "OUTPUT" << endl;
-            cout << "number of predictions:  " << p_bm->num_preds() << endl;
-            cout << "number of mispredictions:  "<< p_bm->num_mis() << endl;
-            mispred_rate = ((float)p_bm->num_mis()/p_bm->num_preds())*100;
-            cout << "misprediction rate: " << setprecision(2) << fixed 
-                << mispred_rate << "%" << endl;
-            cout << "FINAL BIMODAL CONTENTS" << endl;
-            p_bm->print_op();
-            break;
-
-        case 2:
-            cout << endl << "OUTPUT" << endl;
-            cout << "number of predictions:  " << p_gs->num_preds() << endl;
-            cout << "number of mispredictions:  "<< p_gs->num_mis() << endl;
-            mispred_rate = ((float)p_gs->num_mis()/p_gs->num_preds())*100;
-            cout << "misprediction rate: " << setprecision(2) << fixed 
-                << mispred_rate << "%" << endl;
-            cout << "FINAL GSHARE CONTENTS" << endl;
-            p_gs->print_op();
-            break;
-
-        case 3:
-            cout << endl << "OUTPUT" << endl;
-            cout << "number of predictions:  " << tran_cnt << endl;
-            cout << "number of mispredictions:  "<< p_bm->num_mis() + p_gs->num_mis() << endl;
-            mispred_rate = ((float)(p_bm->num_mis() + p_gs->num_mis())
-                    /tran_cnt)*100;
-            cout << "misprediction rate: " << setprecision(2) << fixed 
-                << mispred_rate << "%" << endl;
-            c_hy->print_op();
-            cout << "FINAL GSHARE CONTENTS" << endl;
-            p_gs->print_op();
-            cout << "FINAL BIMODAL CONTENTS" << endl;
-            p_bm->print_op();
-
+        switch (type)
+        {
+            case 1:
+                cout << endl << "OUTPUT" << endl;
+                cout << "number of predictions:  " << p_bm->num_preds() << endl;
+                cout << "number of mispredictions:  "<< p_bm->num_mis() << endl;
+                mispred_rate = ((float)p_bm->num_mis()/p_bm->num_preds())*100;
+                cout << "misprediction rate: " << setprecision(2) << fixed 
+                    << mispred_rate << "%" << endl;
+                cout << "FINAL BIMODAL CONTENTS" << endl;
+                p_bm->print_op();
+                break;
+    
+            case 2:
+                cout << endl << "OUTPUT" << endl;
+                cout << "number of predictions:  " << p_gs->num_preds() << endl;
+                cout << "number of mispredictions:  "<< p_gs->num_mis() << endl;
+                mispred_rate = ((float)p_gs->num_mis()/p_gs->num_preds())*100;
+                cout << "misprediction rate: " << setprecision(2) << fixed 
+                    << mispred_rate << "%" << endl;
+                cout << "FINAL GSHARE CONTENTS" << endl;
+                p_gs->print_op();
+                break;
+    
+            case 3:
+                cout << endl << "OUTPUT" << endl;
+                cout << "number of predictions:  " << tran_cnt << endl;
+                cout << "number of mispredictions:  "<< p_bm->num_mis() + p_gs->num_mis() << endl;
+                mispred_rate = ((float)(p_bm->num_mis() + p_gs->num_mis())
+                        /tran_cnt)*100;
+                cout << "misprediction rate: " << setprecision(2) << fixed 
+                    << mispred_rate << "%" << endl;
+                c_hy->print_op();
+                cout << "FINAL GSHARE CONTENTS" << endl;
+                p_gs->print_op();
+                cout << "FINAL BIMODAL CONTENTS" << endl;
+                p_bm->print_op();
+        }
     }
+
+    else
+    {
+        switch (type)
+        {
+            case 1:
+                cout << endl << "OUTPUT" << endl;
+                cout << "size of BTB:  " << btb->getSize() << endl;
+                cout << "number of branches:  " << tran_cnt << endl; 
+                cout << "number of predictions from branch predictor:  " 
+                    << p_bm->num_preds() << endl;
+                cout << "number of mispredictions from branch predictor:  "
+                    << p_bm->num_mis() << endl;
+                cout << "number of branches miss in BTB and taken:  " 
+                    << btb_mispreds << endl;
+                cout << "total mispredictions: " << p_bm->num_mis() + btb_mispreds << endl;
+                mispred_rate = ((float)(p_bm->num_mis() + btb_mispreds)/tran_cnt)*100;
+                cout << "misprediction rate: " << setprecision(2) << fixed 
+                    << mispred_rate << "%" << endl << endl;
+                cout << "FINAL BTB CONTENTS" << endl;
+                btb->print_contents();
+                cout << endl << "FINAL BIMODAL CONTENTS" << endl;
+                p_bm->print_op();
+                break;
+
+            case 2:
+                cout << endl << "OUTPUT" << endl;
+                cout << "size of BTB:  " << btb->getSize() << endl;
+                cout << "number of branches:  " << tran_cnt << endl; 
+                cout << "number of predictions from branch predictor:  " 
+                    << p_gs->num_preds() << endl;
+                cout << "number of mispredictions from branch predictor:  "
+                    << p_gs->num_mis() << endl;
+                cout << "number of branches miss in BTB and taken:  " 
+                    << btb_mispreds << endl;
+                cout << "total mispredictions: " << p_gs->num_mis() + btb_mispreds << endl;
+                mispred_rate = ((float)(p_gs->num_mis() + btb_mispreds)/tran_cnt)*100;
+                cout << "misprediction rate: " << setprecision(2) << fixed 
+                    << mispred_rate << "%" << endl << endl;
+                cout << "FINAL BTB CONTENTS" << endl;
+                btb->print_contents();
+                cout << endl << "FINAL GSHARE CONTENTS" << endl;
+                p_gs->print_op();
+        }
+    }
+
 
     return 0;
 }

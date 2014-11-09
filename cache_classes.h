@@ -3,10 +3,9 @@
 #include <string>
 #include <sstream>
 #include <cstdlib>
-#include <vector>
-#include <iomanip>
 
 using namespace std;
+
 
 //Block Class
 class Block{
@@ -353,10 +352,10 @@ class Cache{
             //cout << "k: "<< k << endl;
             
             updateBlock(addr,index,tag,k,rw);
-            }
         }
+    }
 
-    void request(int addr,int rw)
+    bool request(int addr,int rw)
     {
         int index = (addr & index_mask)/getBlSize();
         //Mask will only get the required bits,
@@ -367,8 +366,6 @@ class Cache{
         int tag = (addr & tag_mask)/(getBlSize() * getNumSet());
         //Masking and then shiftingby (index + block offset) bits
 
-        //cout <<"Index: " << dec << index << " "; 
-        //cout << "Ip tag: " << hex << tag <<endl;
         //Check for Hit or Miss
         bool hit = checkHit(index,tag,rw);
         //cout << "Hit: "<<hit<<endl;
@@ -410,6 +407,7 @@ class Cache{
         else
             updatewrCnt();
 
+        return hit;
 
     }
 
@@ -455,4 +453,5 @@ class Cache{
         cout << "  f. number of writebacks from L1:" << setw(10) << right << getWB()<<endl;
         cout << "  g. total memory traffic: " <<setw(10) << right << getTotMem() << endl;
     }
-
+    
+};

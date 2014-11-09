@@ -10,6 +10,9 @@
 ./sim gshare 10 6 0 0 traces/perl_trace.txt >! my_runs/gshare_4.txt
 ./sim hybrid 9 14 11 6 0 0 traces/gcc_trace.txt >! my_runs/hybrid_1.txt
 ./sim hybrid 5 10 8 5 0 0 traces/jpeg_trace.txt >! my_runs/hybrid_2.txt
+./sim bimodal 7 2048 4 traces/gcc_trace.txt >! my_runs/btb_1.txt
+./sim gshare 10 6 2048 4 traces/perl_trace.txt >! my_runs/btb_2.txt
+
 
 diff -iw my_runs/bimodal_1.txt val_runs/val_bimodal_1.txt
 diff -iw my_runs/bimodal_2.txt val_runs/val_bimodal_2.txt
@@ -21,3 +24,5 @@ diff -iw my_runs/gshare_3.txt val_runs/val_gshare_3.txt
 diff -iw my_runs/gshare_4.txt val_runs/val_gshare_4.txt
 diff -iw my_runs/hybrid_1.txt val_runs/val_hybrid_1.txt
 diff -iw my_runs/hybrid_2.txt val_runs/val_hybrid_2.txt
+diff -iw my_runs/btb_1.txt val_runs/val_BTB_1.txt
+diff -iw my_runs/btb_2.txt val_runs/val_BTB_2.txt

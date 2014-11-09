@@ -74,9 +74,15 @@ class predictor{
         int num_cntrs()
         {   return num_counters;}
        
+        void update_preds()
+        {   predicts += 1;  }
+
         int num_preds()
         {   return predicts; }
         
+        void update_mis()
+        {   mispredicts += 1;  }
+
         int num_mis()
         {   return mispredicts; }
 
