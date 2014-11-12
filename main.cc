@@ -15,15 +15,16 @@ int main(int argc, char *argv[])
     ifstream trace;
     std::string input(argv[1]), bimodal("bimodal"), gshare("gshare"), hybrid("hybrid");
    
-    //Instantiating cache object
+    //Instantiating cache object pointer
     Cache *btb;
 
-    //Instantiating the predictor and chooser classed as required
+    //Instantiating the predictor and chooser pointers as required
     predictor *p_bm, *p_gs ;
     chooser *c_hy;
 
     if (!input.compare(bimodal))
     {
+        //BIMODAL simulation
         if (argc != 6)
         {
             cout << "Not enough arguments, ./sim bimodal <M2> <BTB size> <BTB assoc> \
@@ -31,7 +32,10 @@ int main(int argc, char *argv[])
             exit(EXIT_FAILURE);
         }
 
+        //Setting up the BIMODAL predictor
         p_bm = new predictor(atoi(argv[2]),0);
+
+        //With BTB
         if (atoi(argv[3]))
         {
             btb = new Cache(4,atoi(argv[3]),atoi(argv[4]),0,0,NULL);
@@ -44,6 +48,7 @@ int main(int argc, char *argv[])
     }
     else if (!input.compare(gshare))
     {   
+        //GSHARE Simulation
         if (argc != 7)
         {
             cout << "Not enough arguments, ./sim gshare <M1> <N> <BTB size> <BTB assoc> \
@@ -51,7 +56,10 @@ int main(int argc, char *argv[])
             exit(EXIT_FAILURE);
         }
 
+        //Setting up the GSHARE predictor
         p_gs = new predictor(atoi(argv[2]),atoi(argv[3]));
+
+        //With BTB
         if (atoi(argv[4]))
         {
             btb = new Cache(4,atoi(argv[4]),atoi(argv[5]),0,0,NULL);
@@ -64,6 +72,7 @@ int main(int argc, char *argv[])
     }
     else if (!input.compare(hybrid))
     {   
+        //HYBRID simulation
         if (argc != 9)
         {
             cout << "Not enough arguments, ./sim hybrid <K> <M1> <N> <M2> <BTB size>\
@@ -71,9 +80,14 @@ int main(int argc, char *argv[])
             exit(EXIT_FAILURE);
         }
 
+        //Setting up Chooser
         c_hy = new chooser(atoi(argv[2]));
+
+        //Setting up the BIMODAL and GSHARE predictors
         p_bm = new predictor(atoi(argv[5]),0);
         p_gs = new predictor(atoi(argv[3]),atoi(argv[4]));
+
+        //With BTB
         if (atoi(argv[6]))
         {
             btb = new Cache(4,atoi(argv[6]),atoi(argv[7]),0,0,NULL);
@@ -84,7 +98,6 @@ int main(int argc, char *argv[])
         trace.open(argv[8]); 
     } 
 
-    if (Debug) cout << p_gs->gbhr_s() << endl; 
     if (!trace)
     {
         cerr << "File not found, please check" << endl;
@@ -92,6 +105,8 @@ int main(int argc, char *argv[])
     }
 
     int tran_cnt = 0;
+
+    //Transaction object
     Transaction InTran;
     string strIn;
     bool btb_hit;
@@ -120,6 +135,7 @@ int main(int argc, char *argv[])
         //BTB lookup
         if (btb!=NULL)
         {
+            //BTB access will be a read access only
             btb_hit = btb->request(InTran.retAddr(),0);
             if (!btb_hit)
             {
@@ -129,9 +145,12 @@ int main(int argc, char *argv[])
             }
         }
 
+        //Choosing the predictor based in the type selected
         if (type == 1) 
         {
             if (Debug) cout << "BIMODAL index: ";
+
+            //Making predictions
             p1 = p_bm->predict(InTran.retAddr());
             p_bm->update_tot_cnts(InTran.tranType(), p1);
             if (Debug) cout << endl;
@@ -139,6 +158,8 @@ int main(int argc, char *argv[])
         else if (type == 2) 
         {
             if (Debug) cout << "GSHARE index: ";
+            
+            //Making predictions
             p1 = p_gs->predict(InTran.retAddr());
             p_gs->update_tot_cnts(InTran.tranType(), p1);
             p_gs->update_gbhr(InTran.tranType());
@@ -188,11 +209,6 @@ contin:
         //getting data from next line
         getline(trace, strIn);
         
-        //breaking from the while loop if this is the last line of the file.
-        //Because the eof state may not get set until after a read is attempted 
-        //past the end of file. In our case we are reading line i+1 in iteration i. 
-        //Thus when we reach the last line, the next line is read and the eofbit is set
-        //before attempting the while loop condition.
     }
 
     float mispred_rate;

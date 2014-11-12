@@ -5,17 +5,21 @@
 using namespace std;
 int Debug = 0;
 
+//Basic smith counter class
 class PCounter{
     public:
 
+        //Initial state
         void init_state(int init)
         {
            state = init;
         }
         
+        //Read present state
         int present_state()
         {   return state;}
         
+        //Update state on actual branch decision
         void update_state (bool taken)
         {
             if (taken && state < 3)
@@ -25,6 +29,7 @@ class PCounter{
                 state -= 1;
         }
 
+        //Return prediction
         bool prediction()
         {
             if (state>=2)
@@ -33,17 +38,18 @@ class PCounter{
                 return false;
         }
             
-
     private: 
         int state;
             
 };
 
+//Prediction structure, has output anf prediction data
 struct predictor_op{
     int index;
     bool prediction;
 };
 
+//Predictor Class, made generic for BIMODAL and GSHARE
 class predictor{
     private:
         int index_size, index_offset;
@@ -55,6 +61,7 @@ class predictor{
         int predicts,mispredicts;
 
     public:
+
         predictor(int in_size, int in_ghr)
         {
             index_size = in_size;
@@ -71,34 +78,38 @@ class predictor{
             }
         }
 
+        //Returns the size of the counter array
         int num_cntrs()
         {   return num_counters;}
        
+        //Updates the total prediction count
         void update_preds()
         {   predicts += 1;  }
 
+        //Returns number of successful predictions
         int num_preds()
         {   return predicts; }
         
+        //Updates the misprediction count
         void update_mis()
         {   mispredicts += 1;  }
 
+        //Returns number of mipredictions
         int num_mis()
         {   return mispredicts; }
 
-        int gbhr_off()
-        {   return gbhr_offset; }
-
-        int gbhr_s()
-        {   return gbhr_size; }
-
+        //Predictior function, returns the prediction structure object
         predictor_op predict(int addr)
         {
             //Updating number of predictions
             predicts += 1;
             if (Debug) cout << "predicts: " << predicts << endl; 
             addr = addr / 4; //Removing the last 2 bits
+
+            //Index for BIMODAL
             int index = addr & index_offset;
+
+            //Calculating the index for GSHARE
             if (gbhr_size!=0)
             {
                 int tmp =  (int)pow(2,(index_size - gbhr_size));    
@@ -117,6 +128,7 @@ class predictor{
             return op;
         }
 
+        //Misprediction counter update, predictor smith counter update
         void update_tot_cnts(bool taken, predictor_op p)
         {
             //Update number of mispredicts
@@ -131,6 +143,7 @@ class predictor{
                 cout << counters.at(p.index).present_state() << endl; 
         }
 
+        //GBHR update
         void update_gbhr(bool taken)
         {
             //Update the value of the gbhr
@@ -142,6 +155,7 @@ class predictor{
             }
         }
 
+        //Print contents
         void print_op()
         {
             for (int i = 0;i<num_counters;i++)
@@ -152,6 +166,7 @@ class predictor{
         }
 };
 
+//Chooser class for the HYBRID predictor, loosely based on the predictor class
 class chooser{
     private:
         int size, offset, num_counters;
@@ -170,6 +185,7 @@ class chooser{
             }
         }
 
+        //Return the choice to follow
         int get_choice(int addr)
         {
             addr = addr/4;
@@ -177,6 +193,7 @@ class chooser{
             return chooser_cntrs.at(index).present_state();
         }
 
+        //Update the chooser counter 
         void update_cntr(int addr, bool inp)
         {
             addr = addr/4;
@@ -184,6 +201,7 @@ class chooser{
             chooser_cntrs.at(index).update_state(inp);
         }
 
+        //Print final contents
         int print_op()
         {
             cout << "FINAL CHOOSER CONTENTS" << endl;
@@ -194,6 +212,8 @@ class chooser{
             }
         }
 };
+
+//Transaction class
 class Transaction{
     private:
         int addr;
